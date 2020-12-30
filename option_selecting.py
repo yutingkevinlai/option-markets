@@ -31,7 +31,7 @@ def get_tickers():
     filtered_list = []
     minPrice = 20
     maxPrice = 50
-    for stock_idx in range(1,50):
+    for stock_idx in range(1,20):
         udlying = list_of_tickers[stock_idx]
         print(stock_idx, udlying)
         g = options.get_expiration_dates(udlying)
@@ -41,6 +41,9 @@ def get_tickers():
             if s.price > minPrice and s.price < maxPrice:
                 filtered_list.append(list_of_tickers[stock_idx])
     print(optionable_list)
+    with open('optionable_list.txt', 'w') as f:
+        for item in optionable_list:
+            f.write("%s\n" % item)
     # print(len(optionable_list))
     # print(filtered_list)
     # print(len(filtered_list))
@@ -88,7 +91,7 @@ def get_high_iv_list(option_list, threshold=0.8):
     return high_iv_list
 
 if __name__ == "__main__":
-    # option_list, _ = get_tickers()
-    option_list = ['TXG', 'TURN', 'FLWS', 'ONEM', 'SRCE', 'VNET', 'TWOU', 'QFIN', 'JOBS', 'ETNB', 'EGHT', 'NMTR', 'AAON', 'ABEO', 'ABMD', 'AXAS', 'ACIU', 'ACIA', 'ACTG', 'ASO', 'ACHC', 'ACAD', 'AXDX', 'XLRN', 'ACCD', 'ARAY']
+    option_list, _ = get_tickers()
+    # option_list = ['TXG', 'TURN', 'FLWS', 'ONEM', 'SRCE', 'VNET', 'TWOU', 'QFIN', 'JOBS', 'ETNB', 'EGHT', 'NMTR', 'AAON', 'ABEO', 'ABMD', 'AXAS', 'ACIU', 'ACIA', 'ACTG', 'ASO', 'ACHC', 'ACAD', 'AXDX', 'XLRN', 'ACCD', 'ARAY']
     high_iv_list = get_high_iv_list(option_list)
     print(high_iv_list)
