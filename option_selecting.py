@@ -16,6 +16,7 @@ from time import time
 
 optionable_list = []
 filtered_list = []
+high_iv_list = []
 min_price = 0
 max_price = 10000
 
@@ -33,7 +34,7 @@ def get_tickers():
     processes = []
     start = time()
     with ThreadPoolExecutor(max_workers=100) as executor:
-        for udlying in list_of_tickers:
+        for udlying in list_of_tickers[1:100]:
             processes.append(executor.submit(find_optionable_stocks, udlying))
     print(optionable_list)
     print(filtered_list)
@@ -75,20 +76,20 @@ def get_avg_volatility(ticker="AAPL", lookahead=30):
     iv_avg = sum(ivs) / lookahead
     return iv_avg
 
-def get_high_iv_list(option_list, threshold=0.8):
-    high_iv_list = []
-    for k in range(len(option_list)):
-        ticker = option_list[k]
-        print(ticker)
-        iv = get_volatility(ticker)
-        avg = get_avg_volatility(ticker)
-        print(avg)
-        if avg > threshold:
-            high_iv_list.append(ticker)
+def get_high_iv_list(ticker, threshold=0.8):
+    print(ticker)
+    iv = get_volatility(ticker)
+    avg = get_avg_volatility(ticker)
+    print(avg)
+    if avg > threshold:
+        high_iv_list.append(ticker)
     return high_iv_list
 
 if __name__ == "__main__":
     option_list, _ = get_tickers()
-    # option_list = ['TXG', 'TURN', 'FLWS', 'ONEM', 'SRCE', 'VNET', 'TWOU', 'QFIN', 'JOBS', 'ETNB', 'EGHT', 'NMTR', 'AAON', 'ABEO', 'ABMD', 'AXAS', 'ACIU', 'ACIA', 'ACTG', 'ASO', 'ACHC', 'ACAD', 'AXDX', 'XLRN', 'ACCD', 'ARAY']
-    high_iv_list = get_high_iv_list(option_list)
+    #option_list = ['TXG', 'TURN', 'FLWS', 'ONEM', 'SRCE', 'VNET', 'TWOU', 'QFIN', 'JOBS', 'ETNB', 'EGHT', 'NMTR', 'AAON', 'ABEO', 'ABMD', 'AXAS', 'ACIU', 'ACIA', 'ACTG', 'ASO', 'ACHC', 'ACAD', 'AXDX', 'XLRN', 'ACCD', 'ARAY']
+    processes2 = []   
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        for ticker in option_list:
+            processes2.append(executor.submit(get_high_iv_list, ticker))
     print(high_iv_list)
