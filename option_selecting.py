@@ -33,7 +33,7 @@ def price_filter(udlying):
     print(udlying)
     if s.price > min_price and s.price < max_price:
         filtered_list.append(udlying)
-        
+
 def price_filter_multi(list_of_tickers):
     processes=[]
     with ThreadPoolExecutor(max_workers=100) as executor:
@@ -64,7 +64,6 @@ def get_volatility(ticker="AAPL"):
     url_1 = "https://www.alphaquery.com/data/option-statistic-chart?ticker="
     url_2 = "&perType=30-Day&identifier=iv-call"
     url = url_1 + ticker + url_2
-    #print(url)
     resp = urllib.request.urlopen(url)
     iv = json.loads(resp.read())
     return iv
@@ -74,19 +73,15 @@ def get_avg_volatility(ticker="AAPL", lookahead=30):
     iv = get_volatility(ticker)
     # get the most recent values
     iv_lookahead = iv[-lookahead:]
-    #print(len(iv_lookahead))
     ivs = [k['value'] for k in iv_lookahead]
     for idx in range(len(ivs)):
         if ivs[idx] is None:
             ivs[idx] = 0
-
     iv_avg = sum(ivs) / lookahead
     return iv_avg, iv
 
 def get_high_iv_list(ticker, threshold=0.8):
-    #print(ticker)
     avg, iv = get_avg_volatility(ticker)
-    #print(avg)
     if avg > threshold:
         print(ticker, "meet the threshold")
         high_iv_list.append(ticker)
@@ -108,7 +103,6 @@ def find_delta (ticker,dates,strike):
     price = u.price
     return content
 
-
 if __name__ == "__main__":
     #option_list, _ = get_tickers()
     print('running')
@@ -117,7 +111,7 @@ if __name__ == "__main__":
     price_filter_multi(option_list[1:1000])
     print(len(option_list))
     print(len(filtered_list))
-    processes2 = []   
+    processes2 = []
     with ThreadPoolExecutor(max_workers=100) as executor:
        for ticker in filtered_list:
             processes2.append(executor.submit(get_high_iv_list, ticker))
