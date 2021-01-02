@@ -1,3 +1,7 @@
+
+import multiprocessing
+from functools import partial
+from contextlib import contextmanager
 from yahoo_fin import options
 import yfinance as yf
 from wallstreet import Stock, Call, Put
@@ -31,13 +35,12 @@ def find_optionable_stocks(udlying):
 
 def price_filter(udlying):
     s = Stock(udlying)
-    print(udlying)
     if s.price > min_price and s.price < max_price:
         filtered_list.append(udlying)
         
 def price_filter_multi(list_of_tickers):
     processes=[]
-    with ThreadPoolExecutor(max_workers=100) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         for udlying in list_of_tickers:
             processes.append(executor.submit(price_filter, udlying))
 
@@ -89,7 +92,7 @@ def get_high_iv_list(ticker, threshold=0.8):
     avg, iv = get_avg_volatility(ticker)
     #print(avg)
     if avg > threshold:
-        print(ticker, "meet the threshold")
+        #print(ticker, "meet the threshold")
         high_iv_list.append(ticker)
         with open(ticker+'.json', 'w') as outfile:
             json.dump(iv, outfile)
@@ -109,6 +112,13 @@ def find_delta (ticker,dates,strike):
     price = u.price
     return content
 
+
+@contextmanager
+def poolcontext(*args, **kwargs):
+    pool = multiprocessing.Pool(*args, **kwargs)
+    yield pool
+    pool.terminate()
+
     
 def DTE(expiration):
     exp_date = date(int(expiration[0:4]), int(expiration[5:7]), int(expiration[8:10])+1)
@@ -122,56 +132,61 @@ def find_score(expiration,premium,delta,strike):
     score = K1*(1-2*abs(delta))*premium*2000/strike
     return score
 
-    
-def multi_find_score (udlying):
-    golden_list=[]
-    Best_option = []
+def find_score_each_expiration(expiration,udlying):
+    ticker = yf.Ticker(udlying)
+    opt = ticker.option_chain(expiration)
+    df = opt.puts
+    s_array = df[["strike","inTheMoney"]]
+    indexNames = s_array[ (s_array['inTheMoney'] == True) ].index
+    s_array.drop(indexNames , inplace=True)
+    df=[]
+    strikes=s_array[["strike"]].to_numpy()[::-1]
     Best_option_score = 0
-    print("start best option finding")
+    Best_option = []
+    if len(strikes)==0:
+        return Best_option_score,Best_option   
+    for strike in strikes:
+        option = Put(udlying, d=int(expiration[8:10]), m=int(expiration[5:7]), y=int(expiration[0:4]), strike=strike)
+        premium = (2*option.price+option.bid+option.ask)/4
+        delta = option.delta()
+        score = int(find_score(expiration,premium,delta,strike))
+        #print(expiration, "on",udlying, float(strike),"put has a score", int(score))
+        if score > Best_option_score:
+            Best_option_score = score
+            Best_option = "{} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
+        
+        if abs(delta) < 0.1 or  premium<0.02*strike:
+            return Best_option_score,Best_option
+    
+
+
+def multi_find_score (udlying):
+    print(udlying)
     ticker = yf.Ticker(udlying)
     expirations = ticker.options
-    pool = ThreadPoolExecutor(4)
-    processes = []
     print(expirations)
-    for expiration in expirations[0:5]:
-        opt = ticker.option_chain(expiration)
-        df = opt.puts
-        s_array = df[["strike","inTheMoney"]]
-        indexNames = s_array[ (s_array['inTheMoney'] == True) ].index
-        s_array.drop(indexNames , inplace=True)
-        df=[]
-        strikes=s_array[["strike"]].to_numpy()[::-1]
-        for strike in strikes:
-            option = Put(udlying, d=int(expiration[8:10]), m=int(expiration[5:7]), y=int(expiration[0:4]), strike=strike)
-            premium = (2*option.price+option.bid+option.ask)/4
-            delta = option.delta()
-            score = int(find_score(expiration,premium,delta,strike))
-            #print(expiration, "on",udlying, float(strike),"put has a score", int(score))
-            if score > Best_option_score:
-                Best_option_score = score
-                Best_option = "Best option: {} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
-            #processes.append(pool.submit(lambda p: find_score(*p), [option,expiration,strike]))
-            if abs(delta) < 0.1 or  premium<0.02*strike:
-                break
-    print(Best_option)
+    with poolcontext(processes=5) as pool:
+        results = pool.map(partial(find_score_each_expiration, udlying=udlying), expirations[0:5])
+    print("Best option overall:",max(results)[1])
 
 
-
-
-if __name__ == "__main__":
-    print('running')
+if __name__ == '__main__':
+    #print('running')
+    #print('reading input')
     #option_list = csv_read (csv_name="optionable_list.csv")
+    #print('price filtering')
     #price_filter_multi(option_list[1:1000])
     #print(len(option_list))
     #print(len(filtered_list))
-    #processes2 = []   
+    #print('finding high IV stocks')
+    #processes2 = []
     #with ThreadPoolExecutor(max_workers=100) as executor:
     #   for ticker in filtered_list:
     #        processes2.append(executor.submit(get_high_iv_list, ticker))
     #print(high_iv_list)
     #udlying = high_iv_list[0]
     udlying="PLTR"
-    #print(udlying)
+    print(udlying)
     pd.options.mode.chained_assignment = None  # default='warn'
+    print('finding the best option')
     multi_find_score(udlying)
-
