@@ -4,8 +4,6 @@ from wallstreet import Stock, Call, Put
 import wallstreet
 import csv
 import urllib, json
-from get_all_tickers import get_tickers as gt
-from get_all_tickers.get_tickers import Region
 import os.path
 from os import path
 import threading, multiprocessing
@@ -14,6 +12,9 @@ import itertools
 from itertools import zip_longest
 import concurrent.futures
 from time import time
+import pandas as pd
+import math
+from datetime import date
 
 optionable_list = []
 filtered_list = []
@@ -33,7 +34,7 @@ def price_filter(udlying):
     print(udlying)
     if s.price > min_price and s.price < max_price:
         filtered_list.append(udlying)
-
+        
 def price_filter_multi(list_of_tickers):
     processes=[]
     with ThreadPoolExecutor(max_workers=100) as executor:
@@ -64,6 +65,7 @@ def get_volatility(ticker="AAPL"):
     url_1 = "https://www.alphaquery.com/data/option-statistic-chart?ticker="
     url_2 = "&perType=30-Day&identifier=iv-call"
     url = url_1 + ticker + url_2
+    #print(url)
     resp = urllib.request.urlopen(url)
     iv = json.loads(resp.read())
     return iv
@@ -73,15 +75,19 @@ def get_avg_volatility(ticker="AAPL", lookahead=30):
     iv = get_volatility(ticker)
     # get the most recent values
     iv_lookahead = iv[-lookahead:]
+    #print(len(iv_lookahead))
     ivs = [k['value'] for k in iv_lookahead]
     for idx in range(len(ivs)):
         if ivs[idx] is None:
             ivs[idx] = 0
+
     iv_avg = sum(ivs) / lookahead
     return iv_avg, iv
 
 def get_high_iv_list(ticker, threshold=0.8):
+    #print(ticker)
     avg, iv = get_avg_volatility(ticker)
+    #print(avg)
     if avg > threshold:
         print(ticker, "meet the threshold")
         high_iv_list.append(ticker)
@@ -103,16 +109,69 @@ def find_delta (ticker,dates,strike):
     price = u.price
     return content
 
+    
+def DTE(expiration):
+    exp_date = date(int(expiration[0:4]), int(expiration[5:7]), int(expiration[8:10])+1)
+    today = date.today()
+    delta = exp_date - today
+    return (delta.days)
+    
+def find_score(expiration,premium,delta,strike):
+    time_diff = DTE(expiration)
+    K1 = 30/time_diff
+    score = K1*(1-2*abs(delta))*premium*2000/strike
+    return score
+
+    
+def multi_find_score (udlying):
+    golden_list=[]
+    Best_option = []
+    Best_option_score = 0
+    print("start best option finding")
+    ticker = yf.Ticker(udlying)
+    expirations = ticker.options
+    pool = ThreadPoolExecutor(4)
+    processes = []
+    print(expirations)
+    for expiration in expirations[0:5]:
+        opt = ticker.option_chain(expiration)
+        df = opt.puts
+        s_array = df[["strike","inTheMoney"]]
+        indexNames = s_array[ (s_array['inTheMoney'] == True) ].index
+        s_array.drop(indexNames , inplace=True)
+        df=[]
+        strikes=s_array[["strike"]].to_numpy()[::-1]
+        for strike in strikes:
+            option = Put(udlying, d=int(expiration[8:10]), m=int(expiration[5:7]), y=int(expiration[0:4]), strike=strike)
+            premium = (2*option.price+option.bid+option.ask)/4
+            delta = option.delta()
+            score = int(find_score(expiration,premium,delta,strike))
+            #print(expiration, "on",udlying, float(strike),"put has a score", int(score))
+            if score > Best_option_score:
+                Best_option_score = score
+                Best_option = "Best option: {} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
+            #processes.append(pool.submit(lambda p: find_score(*p), [option,expiration,strike]))
+            if abs(delta) < 0.1 or  premium<0.02*strike:
+                break
+    print(Best_option)
+
+
+
+
 if __name__ == "__main__":
-    #option_list, _ = get_tickers()
     print('running')
-    option_list = csv_read (csv_name="optionable_list.csv")
-    #option_list = ['TXG', 'TURN', 'FLWS', 'ONEM', 'SRCE', 'VNET', 'TWOU', 'QFIN', 'JOBS', 'ETNB', 'EGHT', 'NMTR', 'AAON', 'ABEO', 'ABMD', 'AXAS', 'ACIU', 'ACIA', 'ACTG', 'ASO', 'ACHC', 'ACAD', 'AXDX', 'XLRN', 'ACCD', 'ARAY']
-    price_filter_multi(option_list[1:1000])
-    print(len(option_list))
-    print(len(filtered_list))
-    processes2 = []
-    with ThreadPoolExecutor(max_workers=100) as executor:
-       for ticker in filtered_list:
-            processes2.append(executor.submit(get_high_iv_list, ticker))
-    print(high_iv_list)
+    #option_list = csv_read (csv_name="optionable_list.csv")
+    #price_filter_multi(option_list[1:1000])
+    #print(len(option_list))
+    #print(len(filtered_list))
+    #processes2 = []   
+    #with ThreadPoolExecutor(max_workers=100) as executor:
+    #   for ticker in filtered_list:
+    #        processes2.append(executor.submit(get_high_iv_list, ticker))
+    #print(high_iv_list)
+    #udlying = high_iv_list[0]
+    udlying="PLTR"
+    #print(udlying)
+    pd.options.mode.chained_assignment = None  # default='warn'
+    multi_find_score(udlying)
+
