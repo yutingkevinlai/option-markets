@@ -1,16 +1,18 @@
-
+import urllib, json
+import multiprocessing, threading
+import pandas as pd
+import concurrent.futures
 from functools import partial
+from time import time
+from datetime import date
 from contextlib import contextmanager
+
+import requests
 from yahoo_fin import options
 import yfinance as yf
 from wallstreet import Stock, Call, Put
-import csv
-import urllib, json
-import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
-from time import time
-import pandas as pd
-from datetime import date
+
+from Utility.stock_utility import *
 
 optionable_list = []
 filtered_list = []
@@ -18,35 +20,60 @@ high_iv_list = []
 min_price = 30
 max_price = 200
 
-def find_optionable_stocks(udlying):
-    g = options.get_expiration_dates(udlying)
-    print(udlying)
-    if len(g) != 0:
-        print(udlying, "has options")
-        optionable_list.append(udlying)
+# def find_optionable_stocks(udlying):
+#     g = options.get_expiration_dates(udlying)
+#     print(udlying)
+#     if len(g) != 0:
+#         print(udlying, "has options")
+#         optionable_list.append(udlying)
 
-def price_filter(udlying):
+def price_filter(udlying, min_price = 30, max_price = 200):
+    """
+    filter price between min and max
+    add filtered price to filtered_list
+    :param udlying: stock
+    :param min_price: min price default 30
+    :param max_price: max price dafult 200
+    :return: None
+    """
+    global filtered_list
     s = Stock(udlying)
-    if s.price > min_price and s.price < max_price:
+    if min_price < s.price < max_price:
         filtered_list.append(udlying)
         
 def price_filter_multi(list_of_tickers):
-    processes=[]
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        for udlying in list_of_tickers:
-            processes.append(executor.submit(price_filter, udlying))
+    """
+    filter prices with multi-threads
+
+    :param list_of_tickers: list of tickers
+    :return: None
+
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(price_filter,list_of_tickers)
 
 def get_tickers():
+    """
+    Get available tickers
+    :return: optionable_list, filtered_list
+    """
+
+    global filtered_list
+
+    ## read all ticker names
     list_of_tickers = csv_read(csv_name="all_tickers_V2.csv")
     print(list_of_tickers)
     print(len(list_of_tickers))
-    processes = []
+
+    ## find all available tickers
     start = time()
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        for udlying in list_of_tickers:
-            processes.append(executor.submit(find_optionable_stocks, udlying))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(find_optionable_stocks,list_of_tickers)
+
     print(optionable_list)
     print(filtered_list)
+
+    ## write back the results to text
     with open('optionable_list.txt', 'w') as f:
         for item in optionable_list:
             f.write("%s\n" % item)
@@ -54,77 +81,117 @@ def get_tickers():
     # print(filtered_list)
     # print(len(filtered_list))
     print(f'Time taken: {time() - start}')
+
     return optionable_list, filtered_list
 
+# def get_volatility(ticker="AAPL"):
+#     url_1 = "https://www.alphaquery.com/data/option-statistic-chart?ticker="
+#     url_2 = "&perType=30-Day&identifier=iv-call"
+#     url = url_1 + ticker + url_2
+#     #print(url)
+#     resp = urllib.request.urlopen(url)
+#     iv = json.loads(resp.read())
+#     return iv
+
 def get_volatility(ticker="AAPL"):
-    url_1 = "https://www.alphaquery.com/data/option-statistic-chart?ticker="
-    url_2 = "&perType=30-Day&identifier=iv-call"
-    url = url_1 + ticker + url_2
-    #print(url)
-    resp = urllib.request.urlopen(url)
-    iv = json.loads(resp.read())
+    """
+    Get stock's volatiliy
+    :param ticker: ticker name
+    :return: list of json volatility data
+    """
+    url = "https://www.alphaquery.com/data/option-statistic-chart"
+    params = {
+        "ticker" : ticker,
+        "perType" : "30-Day",
+        "identifier" : "iv-call"
+    }
+    r = requests.get(url=url,params=params)
+    iv = r.json()
     return iv
 
+
 def get_avg_volatility(ticker="AAPL", lookahead=30):
+    """
+    Calculate avg volatiliy
+    :param ticker:  ticker name
+    :param lookahead: lookahead
+    :return:
+    """
 
     iv = get_volatility(ticker)
     # get the most recent values
     iv_lookahead = iv[-lookahead:]
     #print(len(iv_lookahead))
-    ivs = [k['value'] for k in iv_lookahead]
-    for idx in range(len(ivs)):
-        if ivs[idx] is None:
-            ivs[idx] = 0
+    ivs = [k['value'] if k['value'] else 0.0 for k in iv_lookahead]
 
     iv_avg = sum(ivs) / lookahead
     return iv_avg, iv
 
 def get_high_iv_list(ticker, threshold=0.8):
-    #print(ticker)
+    """
+    Add ticker larger than threshold to high_iv_list
+    :param ticker: stock name
+    :param threshold: threshold int
+    :return: high_iv_list(list)
+    """
+    global high_iv_list
     avg, iv = get_avg_volatility(ticker)
     #print(avg)
     if avg > threshold:
         #print(ticker, "meet the threshold")
         high_iv_list.append(ticker)
-        with open(ticker+'.json', 'w') as outfile:
+        with open(f"{ticker}.json", 'w') as outfile:
             json.dump(iv, outfile)
     return high_iv_list
 
-def csv_read (csv_name="all_tickers.csv"):
-    content = []
-    with open(csv_name, "r") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        for lines in csv_reader:
-            content.append(lines[0])
-    return content
-
-def find_delta (ticker,dates,strike):
-    u = put(udlying, d=15, m=1, y=2021, strike=stockprice+offset)
-    score=2*delta-1
-    price = u.price
-    return content
 
 
-@contextmanager
-def poolcontext(*args, **kwargs):
-    pool = multiprocessing.Pool(*args, **kwargs)
-    yield pool
-    pool.terminate()
+# def find_delta (ticker,dates,strike):
+#     u = put(udlying, d=15, m=1, y=2021, strike=stockprice+offset)
+#     score=2*delta-1
+#     price = u.price
+#     return content
+
+
+# @contextmanager
+# def poolcontext(*args, **kwargs):
+#     pool = multiprocessing.Pool(*args, **kwargs)
+#     yield pool
+#     pool.terminate()
 
     
 def DTE(expiration):
+    """
+    Find DTE from expiration
+    :param expiration: expiration time (int)
+    :return: number of days
+    """
     exp_date = date(int(expiration[0:4]), int(expiration[5:7]), int(expiration[8:10])+1)
     today = date.today()
     delta = exp_date - today
     return (delta.days)
     
 def find_score(expiration,premium,delta,strike):
+    """
+    find score
+    :param expiration:
+    :param premium:
+    :param delta:
+    :param strike:
+    :return:
+    """
     time_diff = DTE(expiration)
     K1 = 30/time_diff
     score = K1*(1-2*abs(delta))*premium*2000/strike
     return score
 
 def find_score_each_expiration(expiration,udlying):
+    """
+
+    :param expiration:
+    :param udlying:
+    :return:
+    """
     print(f"Processing {udlying}")
     ticker = yf.Ticker(udlying)
     opt = ticker.option_chain(expiration)
@@ -150,10 +217,14 @@ def find_score_each_expiration(expiration,udlying):
         
         if abs(delta) < 0.1 or  premium<0.02*strike:
             return Best_option_score,Best_option
-    
 
-
+##TODO: modify multithreading function
 def multi_find_score (udlying):
+    """
+
+    :param udlying:
+    :return:
+    """
     print(udlying)
     ticker = yf.Ticker(udlying)
     expirations = ticker.options
