@@ -1,3 +1,4 @@
+#%%
 import urllib, json
 import multiprocessing, threading
 import pandas as pd
@@ -19,6 +20,9 @@ filtered_list = []
 high_iv_list = []
 min_price = 30
 max_price = 200
+
+#%%
+#Function
 
 # def find_optionable_stocks(udlying):
 #     g = options.get_expiration_dates(udlying)
@@ -203,14 +207,16 @@ def find_score_each_expiration(expiration,udlying):
     strikes=s_array[["strike"]].to_numpy()[::-1]
     Best_option_score = 0
     Best_option = []
-    if len(strikes)==0:
-        return Best_option_score,Best_option   
+
+    if len(strikes) == 0:
+        return Best_option_score,Best_option
+
     for strike in strikes:
         option = Put(udlying, d=int(expiration[8:10]), m=int(expiration[5:7]), y=int(expiration[0:4]), strike=strike)
         premium = (2*option.price+option.bid+option.ask)/4
         delta = option.delta()
         score = int(find_score(expiration,premium,delta,strike))
-        #print(expiration, "on",udlying, float(strike),"put has a score", int(score))
+        print(expiration, "on",udlying, float(strike),"put has a score", int(score))
         if score > Best_option_score:
             Best_option_score = score
             Best_option = "{} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
@@ -218,7 +224,6 @@ def find_score_each_expiration(expiration,udlying):
         if abs(delta) < 0.1 or  premium<0.02*strike:
             return Best_option_score,Best_option
 
-##TODO: modify multithreading function
 def multi_find_score (udlying):
     """
 
@@ -229,12 +234,37 @@ def multi_find_score (udlying):
     ticker = yf.Ticker(udlying)
     expirations = ticker.options
     print(expirations)
-    with poolcontext(processes=5) as pool:
-        results = pool.map(partial(find_score_each_expiration, udlying=udlying), expirations[0:5])
+    results = list()
+
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+
+        for expi in expirations[:5]:
+            futures.append(executor.submit(partial(find_score_each_expiration,udlying=udlying), expi))
+
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
     print("Best option overall:",max(results)[1])
+#%%
+def multi_find_score_multiprocess(udlying,processes=None):
+    print(udlying)
+    ticker = yf.Ticker(udlying)
+    expirations = ticker.options
+    print(expirations)
+    if not processes:
+        with multiprocessing.Pool(processes=processes) as pool:
+            results = pool.map(partial(find_score_each_expiration,udlying=udlying),expirations[:5])
+            print(print("Best option overall:",max(results)[1]))
+    else:
+        with multiprocessing.Pool() as pool:
+            results = pool.map(partial(find_score_each_expiration,udlying=udlying),expirations[:5])
+            print(print("Best option overall:",max(results)[1]))
 
 
-if __name__ == '__main__':
+#%%
+
+# if __name__ == '__main__':
     #print('running')
     #print('reading input')
     #option_list = csv_read (csv_name="optionable_list.csv")
@@ -249,8 +279,18 @@ if __name__ == '__main__':
     #        processes2.append(executor.submit(get_high_iv_list, ticker))
     #print(high_iv_list)
     #udlying = high_iv_list[0]
-    udlying="PLTR"
-    print(udlying)
-    pd.options.mode.chained_assignment = None  # default='warn'
-    print('finding the best option')
-    multi_find_score(udlying)
+udlying="PLTR"
+print(udlying)
+pd.options.mode.chained_assignment = None  # default='warn'
+print('finding the best option')
+
+#%%
+## Multithreads
+start = time()
+multi_find_score(udlying)
+print(f"Multithreads: {time()-start}")
+#%%
+## multiprocess
+start = time()
+multi_find_score_multiprocess(udlying)
+print(f"multiprocess: {time()-start}")
