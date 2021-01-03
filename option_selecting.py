@@ -1,23 +1,15 @@
 
-import multiprocessing
 from functools import partial
 from contextlib import contextmanager
 from yahoo_fin import options
 import yfinance as yf
 from wallstreet import Stock, Call, Put
-import wallstreet
 import csv
 import urllib, json
-import os.path
-from os import path
-import threading, multiprocessing
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import itertools
-from itertools import zip_longest
-import concurrent.futures
+import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 from time import time
 import pandas as pd
-import math
 from datetime import date
 
 optionable_list = []
@@ -133,6 +125,7 @@ def find_score(expiration,premium,delta,strike):
     return score
 
 def find_score_each_expiration(expiration,udlying):
+    print(f"Processing {udlying}")
     ticker = yf.Ticker(udlying)
     opt = ticker.option_chain(expiration)
     df = opt.puts
