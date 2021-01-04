@@ -13,6 +13,7 @@ import requests
 from yahoo_fin import options
 import yfinance as yf
 from wallstreet import Stock, Call, Put
+import time 
 
 from Utility.stock_utility import *
 
@@ -33,19 +34,19 @@ max_price = 200
 #         print(udlying, "has options")
 #         optionable_list.append(udlying)
 
-def get_stock(ticker="AAPL"):
+def get_expiration(ticker="AAPL"):
     """
     Get stock info
     :param ticker: ticker name
     :return: stock info
     """
     url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
-    # params = {
-    #     "ticker": ticker,
-    # }
+    DAY = 86400
     r = requests.get(url=url)
     stock = r.json()
-    return stock
+    Epoch_dates = stock['optionChain']['result'][0]['expirationDates']
+    expirations = [time.strftime('%Y-%m-%d', time.localtime(i+0*DAY)) for i in Epoch_dates]
+    return expirations
 
 def price_filter(udlying, min_price = 30, max_price = 200):
     """
@@ -244,7 +245,6 @@ def find_score_each_expiration(expiration, udlying):
     strikes = s_array[["strike"]].to_numpy()[::-1]
     Best_option_score = 0
     Best_option = []
-
     if len(strikes) == 0:
         return Best_option_score, Best_option
 
@@ -253,7 +253,7 @@ def find_score_each_expiration(expiration, udlying):
         premium = (2*option.price+option.bid+option.ask)/4
         delta = option.delta()
         score = int(find_score(expiration, premium, delta, strike))
-        print(expiration, "on", udlying, float(strike), "put has a score", int(score))
+        #print(expiration, "on", udlying, float(strike), "put has a score", int(score))
         if score > Best_option_score:
             Best_option_score = score
             Best_option = "{} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
@@ -269,14 +269,13 @@ def multi_find_score(udlying):
     """
     print(udlying)
     ticker = yf.Ticker(udlying)
-    expirations = ticker.options
-    print(expirations)
+    expirations = get_expiration(ticker=udlying)
+    #print(expirations)
     results = list()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
-
-        for expi in expirations[:5]:
+        for expi in expirations[:2]:
             futures.append(executor.submit(partial(find_score_each_expiration, udlying=udlying), expi))
 
         for future in concurrent.futures.as_completed(futures):
@@ -303,38 +302,29 @@ def multi_find_score_multiprocess(udlying,processes=None):
 # %%
 
 # if __name__ == '__main__':
-# print('running')
-# print('reading input')
-# option_list = csv_read (csv_name="optionable_list.csv")
+print('running')
+print('reading input')
+option_list = csv_read (csv_name="optionable_list.csv")
 # print('price filtering')
 # price_filter_multi(option_list[1:1000])
 # print(len(option_list))
 # print(len(filtered_list))
 # print('finding high IV stocks')
-# processes2 = []
-# with ThreadPoolExecutor(max_workers=100) as executor:
-#   for ticker in filtered_list:
-#        processes2.append(executor.submit(get_high_iv_list, ticker))
-# print(high_iv_list)
-# udlying = high_iv_list[0]
+processes2 = []
+with ThreadPoolExecutor(max_workers=100) as executor:
+   for ticker in option_list:
+        processes2.append(executor.submit(get_high_iv_list, ticker))
+print(high_iv_list)
 
-ticker = "PLTR"
-r = get_stock(ticker)
-print(r)
-
-udlying = "PLTR"
-print(udlying)
->>>>>>> 32045376f195635fc4d5d7bc93213c972e3882fc
+price_filter_multi(high_iv_list[1:1000])
+print(filtered_list)
+#print(udlying)
 pd.options.mode.chained_assignment = None  # default='warn'
 print('finding the best option')
 
 # %%
 ## Multithreads
-start = time()
-multi_find_score(udlying)
-print(f"Multithreads: {time() - start}")
-# %%
-## multiprocess
-start = time()
-multi_find_score_multiprocess(udlying)
-print(f"multiprocess: {time() - start}")
+for udlying in filtered_list:
+    pd.options.mode.chained_assignment = None  # default='warn'
+    print('finding the best option for', udlying)
+    multi_find_score(udlying)
