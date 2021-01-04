@@ -34,6 +34,24 @@ max_price = 200
 #         print(udlying, "has options")
 #         optionable_list.append(udlying)
 
+def get_volume(ticker="AAPL"):
+    """
+    Get stock's volatiliy
+    :param ticker: ticker name
+    :return: list of json volatility data
+    """
+    url = "https://www.alphaquery.com/data/stock-price-chart"
+    params = {
+        "ticker": ticker,
+    }
+    r = requests.get(url=url, params=params)
+    stock_info = r.json()
+    volume = stock_info["adjusted"][-1]["volume"]
+    return volume
+
+
+
+
 def get_expiration(ticker="AAPL"):
     """
     Get stock info
@@ -61,7 +79,20 @@ def price_filter(udlying, min_price = 30, max_price = 200):
     s = Stock(udlying)
     if min_price < s.price < max_price:
         filtered_list.append(udlying)
-
+        
+def volume_filter(udlying, v_min=5000000):
+    """
+    filter price between min and max
+    add filtered price to filtered_list
+    :param udlying: stock
+    :param min_price: min price default 30
+    :param max_price: max price dafult 200
+    :return: None
+    """
+    global filtered_list
+    #print(udlying)
+    if get_volume(udlying)>v_min:
+        filtered_list.append(udlying)
 
 def price_filter_multi(list_of_tickers):
     """
@@ -71,9 +102,19 @@ def price_filter_multi(list_of_tickers):
     :return: None
 
     """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         executor.map(price_filter, list_of_tickers)
 
+def volume_filter_multi(list_of_tickers):
+    """
+    filter prices with multi-threads
+
+    :param list_of_tickers: list of tickers
+    :return: None
+
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        executor.map(volume_filter, list_of_tickers)
 
 def get_tickers():
     """
@@ -223,7 +264,7 @@ def find_score(expiration, premium, delta, strike):
     """
     time_diff = DTE(expiration)
     K1 = 30 / time_diff
-    score = K1 * (1 - 2 * abs(delta)) * premium * 2000 / strike
+    score = K1 * (1 - 3 * abs(delta)) * premium * 2000 / strike
     return score
 
 
@@ -254,12 +295,13 @@ def find_score_each_expiration(expiration, udlying):
         delta = option.delta()
         score = int(find_score(expiration, premium, delta, strike))
         #print(expiration, "on", udlying, float(strike), "put has a score", int(score))
+        if abs(delta) < 0.1 or  premium<0.025*strike:
+            return Best_option_score,Best_option
         if score > Best_option_score:
             Best_option_score = score
-            Best_option = "{} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
+            Best_option = "{} {} {} put with score {}.{}".format(udlying, expiration, float(strike), int(score),int(delta))
         
-        if abs(delta) < 0.1 or  premium<0.1*strike:
-            return Best_option_score,Best_option
+
 
 
 def multi_find_score(udlying):
@@ -270,7 +312,7 @@ def multi_find_score(udlying):
     print(udlying)
     ticker = yf.Ticker(udlying)
     expirations = get_expiration(ticker=udlying)
-    #print(expirations)
+    print(expirations)
     results = list()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -280,8 +322,8 @@ def multi_find_score(udlying):
 
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
-    res = filter(None, results)
-    if res:
+    res = list(filter(None, results))
+    if len(res)>0:
         print("Best option overall:",max(res)[1])
 #%%
 def multi_find_score_multiprocess(udlying,processes=None):
@@ -309,22 +351,27 @@ option_list = csv_read (csv_name="optionable_list.csv")
 # price_filter_multi(option_list[1:1000])
 # print(len(option_list))
 # print(len(filtered_list))
-# print('finding high IV stocks')
+print('finding high IV stocks')
 processes2 = []
 with ThreadPoolExecutor(max_workers=100) as executor:
    for ticker in option_list:
         processes2.append(executor.submit(get_high_iv_list, ticker))
 print(high_iv_list)
 
-price_filter_multi(high_iv_list[1:1000])
+print("volume filtering")
+volume_filter_multi(high_iv_list)
 print(filtered_list)
-#print(udlying)
+udlying ='NIO'
+print(udlying)
 pd.options.mode.chained_assignment = None  # default='warn'
 print('finding the best option')
 
 # %%
-## Multithreads
+#Multithreads
 for udlying in filtered_list:
     pd.options.mode.chained_assignment = None  # default='warn'
     print('finding the best option for', udlying)
     multi_find_score(udlying)
+    
+    
+    
