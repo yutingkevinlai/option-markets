@@ -7,6 +7,7 @@ from functools import partial
 from time import time
 from datetime import date
 from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from yahoo_fin import options
@@ -31,6 +32,20 @@ max_price = 200
 #         print(udlying, "has options")
 #         optionable_list.append(udlying)
 
+def get_stock(ticker="AAPL"):
+    """
+    Get stock info
+    :param ticker: ticker name
+    :return: stock info
+    """
+    url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
+    # params = {
+    #     "ticker": ticker,
+    # }
+    r = requests.get(url=url)
+    stock = r.json()
+    return stock
+
 def price_filter(udlying, min_price = 30, max_price = 200):
     """
     filter price between min and max
@@ -53,7 +68,7 @@ def price_filter_multi(list_of_tickers):
     :return: None
 
     """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
         executor.map(price_filter,list_of_tickers)
 
 def get_tickers():
@@ -144,8 +159,8 @@ def get_high_iv_list(ticker, threshold=0.8):
     if avg > threshold:
         #print(ticker, "meet the threshold")
         high_iv_list.append(ticker)
-        with open(f"{ticker}.json", 'w') as outfile:
-            json.dump(iv, outfile)
+        #with open(f"{ticker}.json", 'w') as outfile:
+        #    json.dump(iv, outfile)
     return high_iv_list
 
 
@@ -196,7 +211,7 @@ def find_score_each_expiration(expiration,udlying):
     :param udlying:
     :return:
     """
-    print(f"Processing {udlying}")
+    #print(f"Processing {udlying}")
     ticker = yf.Ticker(udlying)
     opt = ticker.option_chain(expiration)
     df = opt.puts
@@ -212,7 +227,7 @@ def find_score_each_expiration(expiration,udlying):
         return Best_option_score,Best_option
 
     for strike in strikes:
-        option = Put(udlying, d=int(expiration[8:10]), m=int(expiration[5:7]), y=int(expiration[0:4]), strike=strike)
+        option = Put(udlying, d=int(expiration[8:10])+1, m=int(expiration[5:7]), y=int(expiration[0:4]), strike=strike)
         premium = (2*option.price+option.bid+option.ask)/4
         delta = option.delta()
         score = int(find_score(expiration,premium,delta,strike))
@@ -221,7 +236,7 @@ def find_score_each_expiration(expiration,udlying):
             Best_option_score = score
             Best_option = "{} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
         
-        if abs(delta) < 0.1 or  premium<0.02*strike:
+        if abs(delta) < 0.1 or  premium<0.1*strike:
             return Best_option_score,Best_option
 
 def multi_find_score (udlying):
@@ -245,13 +260,15 @@ def multi_find_score (udlying):
 
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
-    print("Best option overall:",max(results)[1])
+    res = filter(None, results)
+    if res:
+        print("Best option overall:",max(res)[1])
 #%%
 def multi_find_score_multiprocess(udlying,processes=None):
     print(udlying)
     ticker = yf.Ticker(udlying)
-    expirations = ticker.options
-    print(expirations)
+    expirations = ticker.options ## yfinance libarary
+    #print(expirations)
     if not processes:
         with multiprocessing.Pool(processes=processes) as pool:
             results = pool.map(partial(find_score_each_expiration,udlying=udlying),expirations[:5])
@@ -265,32 +282,33 @@ def multi_find_score_multiprocess(udlying,processes=None):
 #%%
 
 # if __name__ == '__main__':
-    #print('running')
-    #print('reading input')
-    #option_list = csv_read (csv_name="optionable_list.csv")
-    #print('price filtering')
-    #price_filter_multi(option_list[1:1000])
-    #print(len(option_list))
+#print('running')
+#print('reading input')
+#option_list = csv_read (csv_name="optionable_list.csv")
+#print(len(option_list))
     #print(len(filtered_list))
-    #print('finding high IV stocks')
-    #processes2 = []
-    #with ThreadPoolExecutor(max_workers=100) as executor:
-    #   for ticker in filtered_list:
-    #        processes2.append(executor.submit(get_high_iv_list, ticker))
-    #print(high_iv_list)
-    #udlying = high_iv_list[0]
-udlying="PLTR"
-print(udlying)
+#print('finding high IV stocks')
+#processes2 = []
+#with ThreadPoolExecutor(max_workers=100) as executor:
+#   for ticker in option_list:
+#        processes2.append(executor.submit(get_high_iv_list, ticker))
+#print(high_iv_list)
+#print("filtering price range")
+#price_filter_multi(high_iv_list)
+#print(filtered_list)
+#udlying = filtered_list[0]
+udlying="BNTX"
 pd.options.mode.chained_assignment = None  # default='warn'
 print('finding the best option')
 
 #%%
 ## Multithreads
 start = time()
-multi_find_score(udlying)
+
+for udlying in [udlying]:
+    pd.options.mode.chained_assignment = None  # default='warn'
+    print('finding the best option for', udlying)
+    multi_find_score(udlying)
+    
 print(f"Multithreads: {time()-start}")
-#%%
-## multiprocess
-start = time()
-multi_find_score_multiprocess(udlying)
-print(f"multiprocess: {time()-start}")
+
