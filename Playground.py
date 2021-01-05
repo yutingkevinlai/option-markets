@@ -40,5 +40,21 @@ def get_avg_volatility(ticker="AAPL", lookahead=30):
     print(f"time is {time()-start}")
     return iv_avg, iv
 
-iv_avg, iv = get_avg_volatility()
-print(iv_avg)
+
+a = 10
+
+def sample():
+    global a
+    a *= 2
+    print(a)
+# sample()
+
+import time
+t = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(1610064000))
+print(t)
+##
+
+
+
+
+

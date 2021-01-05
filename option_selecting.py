@@ -44,7 +44,7 @@ def price_filter(udlying, min_price = 30, max_price = 200):
     s = Stock(udlying)
     if min_price < s.price < max_price:
         filtered_list.append(udlying)
-        
+
 def price_filter_multi(list_of_tickers):
     """
     filter prices with multi-threads
@@ -163,7 +163,7 @@ def get_high_iv_list(ticker, threshold=0.8):
 #     yield pool
 #     pool.terminate()
 
-    
+
 def DTE(expiration):
     """
     Find DTE from expiration
@@ -174,7 +174,7 @@ def DTE(expiration):
     today = date.today()
     delta = exp_date - today
     return (delta.days)
-    
+
 def find_score(expiration,premium,delta,strike):
     """
     find score
@@ -220,7 +220,7 @@ def find_score_each_expiration(expiration,udlying):
         if score > Best_option_score:
             Best_option_score = score
             Best_option = "{} {} {} put with score {}.".format(udlying, expiration, float(strike), int(score))
-        
+
         if abs(delta) < 0.1 or  premium<0.02*strike:
             return Best_option_score,Best_option
 
@@ -245,7 +245,10 @@ def multi_find_score (udlying):
 
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
-    print("Best option overall:",max(results)[1])
+
+    results = filter(None, results)
+    if results:
+        print("Best option overall:",max(results)[1])
 #%%
 def multi_find_score_multiprocess(udlying,processes=None):
     print(udlying)
@@ -255,11 +258,15 @@ def multi_find_score_multiprocess(udlying,processes=None):
     if not processes:
         with multiprocessing.Pool(processes=processes) as pool:
             results = pool.map(partial(find_score_each_expiration,udlying=udlying),expirations[:5])
-            print(print("Best option overall:",max(results)[1]))
+            results =  filter(None,results)
+            if results:
+                print(print("Best option overall:",max(results)[1]))
     else:
         with multiprocessing.Pool() as pool:
             results = pool.map(partial(find_score_each_expiration,udlying=udlying),expirations[:5])
-            print(print("Best option overall:",max(results)[1]))
+            results = filter(None,results)
+            if results:
+                print(print("Best option overall:",max(results)[1]))
 
 
 #%%
