@@ -25,20 +25,13 @@ max_price = 200
 
 
 # %%
-# Function
 
-# def find_optionable_stocks(udlying):
-#     g = options.get_expiration_dates(udlying)
-#     print(udlying)
-#     if len(g) != 0:
-#         print(udlying, "has options")
-#         optionable_list.append(udlying)
 
 def get_volume(ticker="AAPL"):
     """
-    Get stock's volatiliy
+    Get stock's volume
     :param ticker: ticker name
-    :return: list of json volatility data
+    :return:
     """
     url = "https://www.alphaquery.com/data/stock-price-chart"
     params = {
@@ -50,21 +43,19 @@ def get_volume(ticker="AAPL"):
     return volume
 
 
-
-
-def get_expiration(ticker="AAPL"):
-    """
-    Get stock info
-    :param ticker: ticker name
-    :return: stock info
-    """
-    url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
-    DAY = 86400
-    r = requests.get(url=url)
-    stock = r.json()
-    Epoch_dates = stock['optionChain']['result'][0]['expirationDates']
-    expirations = [time.strftime('%Y-%m-%d', time.localtime(i+0*DAY)) for i in Epoch_dates]
-    return expirations
+# def get_expiration(ticker="AAPL"):
+#     """
+#     Get stock info
+#     :param ticker: ticker name
+#     :return: stock info
+#     """
+#     url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
+#     DAY = 86400
+#     r = requests.get(url=url)
+#     stock = r.json()
+#     Epoch_dates = stock['optionChain']['result'][0]['expirationDates']
+#     expirations = [time.strftime('%Y-%m-%d', time.localtime(i+0*DAY)) for i in Epoch_dates]
+#     return expirations
 
 def price_filter(udlying, min_price = 30, max_price = 200):
     """

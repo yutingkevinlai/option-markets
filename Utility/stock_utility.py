@@ -28,3 +28,21 @@ def csv_read (csv_name="all_tickers.csv"):
         content =[lines[0] for lines in csv_reader]
 
     return content
+
+def get_expiration(ticker="AAPL",time_diff=1):
+    """
+    Get stock info
+    :param ticker: ticker name
+    :param time_diff: time difference
+    :return: stock info
+    """
+    url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
+    # params = {
+    #     "ticker": ticker,
+    # }
+    DAY = 86400*time_diff
+    r = requests.get(url=url)
+    stock = r.json()
+    epoch_dates = stock.get("optionChain",{}).get("result",[])[0].get("expirationDates",None)
+    expirations = [time.strftime('%Y-%m-%d', time.localtime(date+DAY)) for date in epoch_dates]
+    return expirations
