@@ -1,4 +1,6 @@
 import csv
+import requests
+import time
 
 from yahoo_fin import options
 
