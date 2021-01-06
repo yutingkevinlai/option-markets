@@ -6,8 +6,6 @@ import concurrent.futures
 from functools import partial
 from time import time
 from datetime import date
-from contextlib import contextmanager
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from yahoo_fin import options
@@ -25,20 +23,13 @@ max_price = 200
 
 
 # %%
-# Function
 
-# def find_optionable_stocks(udlying):
-#     g = options.get_expiration_dates(udlying)
-#     print(udlying)
-#     if len(g) != 0:
-#         print(udlying, "has options")
-#         optionable_list.append(udlying)
 
 def get_volume(ticker="AAPL"):
     """
-    Get stock's volatiliy
+    Get stock's volume
     :param ticker: ticker name
-    :return: list of json volatility data
+    :return:
     """
     url = "https://www.alphaquery.com/data/stock-price-chart"
     params = {
@@ -48,73 +39,6 @@ def get_volume(ticker="AAPL"):
     stock_info = r.json()
     volume = stock_info["adjusted"][-1]["volume"]
     return volume
-
-
-
-
-def get_expiration(ticker="AAPL"):
-    """
-    Get stock info
-    :param ticker: ticker name
-    :return: stock info
-    """
-    url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
-    DAY = 86400
-    r = requests.get(url=url)
-    stock = r.json()
-    Epoch_dates = stock['optionChain']['result'][0]['expirationDates']
-    expirations = [time.strftime('%Y-%m-%d', time.localtime(i+0*DAY)) for i in Epoch_dates]
-    return expirations
-
-def price_filter(udlying, min_price = 30, max_price = 200):
-    """
-    filter price between min and max
-    add filtered price to filtered_list
-    :param udlying: stock
-    :param min_price: min price default 30
-    :param max_price: max price dafult 200
-    :return: None
-    """
-    global filtered_list
-    s = Stock(udlying)
-    if min_price < s.price < max_price:
-        filtered_list.append(udlying)
-        
-def volume_filter(udlying, v_min=5000000):
-    """
-    filter price between min and max
-    add filtered price to filtered_list
-    :param udlying: stock
-    :param min_price: min price default 30
-    :param max_price: max price dafult 200
-    :return: None
-    """
-    global filtered_list
-    #print(udlying)
-    if get_volume(udlying)>v_min:
-        filtered_list.append(udlying)
-
-def price_filter_multi(list_of_tickers):
-    """
-    filter prices with multi-threads
-
-    :param list_of_tickers: list of tickers
-    :return: None
-
-    """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-        executor.map(price_filter, list_of_tickers)
-
-def volume_filter_multi(list_of_tickers):
-    """
-    filter prices with multi-threads
-
-    :param list_of_tickers: list of tickers
-    :return: None
-
-    """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-        executor.map(volume_filter, list_of_tickers)
 
 def get_tickers():
     """
@@ -148,16 +72,6 @@ def get_tickers():
 
     return optionable_list, filtered_list
 
-
-# def get_volatility(ticker="AAPL"):
-#     url_1 = "https://www.alphaquery.com/data/option-statistic-chart?ticker="
-#     url_2 = "&perType=30-Day&identifier=iv-call"
-#     url = url_1 + ticker + url_2
-#     #print(url)
-#     resp = urllib.request.urlopen(url)
-#     iv = json.loads(resp.read())
-#     return iv
-
 def get_volatility(ticker="AAPL"):
     """
     Get stock's volatiliy
@@ -174,7 +88,6 @@ def get_volatility(ticker="AAPL"):
     iv = r.json()
     return iv
 
-# %%
 def get_stock(ticker="AAPL"):
     """
     Get stock info
@@ -189,7 +102,6 @@ def get_stock(ticker="AAPL"):
     print(r)
     stock = r.json()
     return stock
-
 
 def get_avg_volatility(ticker="AAPL", lookahead=30):
     """
@@ -208,7 +120,6 @@ def get_avg_volatility(ticker="AAPL", lookahead=30):
     iv_avg = sum(ivs) / lookahead
     return iv_avg, iv
 
-
 def get_high_iv_list(ticker, threshold=0.8):
     """
     Add ticker larger than threshold to high_iv_list
@@ -226,20 +137,66 @@ def get_high_iv_list(ticker, threshold=0.8):
         #    json.dump(iv, outfile)
     return high_iv_list
 
+def volume_filter(udlying, v_min=5000000):
+    """
+    filter price between min and max
+    add filtered price to filtered_list
+    :param udlying: stock
+    :param min_price: min price default 30
+    :param max_price: max price dafult 200
+    :return: None
+    """
+    global filtered_list
+    #print(udlying)
+    if get_volume(udlying)>v_min:
+        filtered_list.append(udlying)
 
-# def find_delta (ticker,dates,strike):
-#     u = put(udlying, d=15, m=1, y=2021, strike=stockprice+offset)
-#     score=2*delta-1
-#     price = u.price
-#     return content
+def get_high_iv_and_filter_volume(ticker,threshold=0.8,v_min=5000000):
+    global filtered_list
+
+    avg, iv = get_avg_volatility(ticker)
+    if avg > threshold and get_volume(ticker) > v_min:
+        print(f"Add {ticker}")
+        filtered_list.append(ticker)
 
 
-# @contextmanager
-# def poolcontext(*args, **kwargs):
-#     pool = multiprocessing.Pool(*args, **kwargs)
-#     yield pool
-#     pool.terminate()
+def price_filter(udlying, min_price = 30, max_price = 200):
+    """
+    filter price between min and max
+    add filtered price to filtered_list
+    :param udlying: stock
+    :param min_price: min price default 30
+    :param max_price: max price dafult 200
+    :return: None
+    """
+    global filtered_list
+    s = Stock(udlying)
+    if min_price < s.price < max_price:
+        filtered_list.append(udlying)
 
+def price_filter_multi(list_of_tickers):
+    """
+    filter prices with multi-threads
+
+    :param list_of_tickers: list of tickers
+    :return: None
+
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        executor.map(price_filter, list_of_tickers)
+
+def volume_filter_multi(list_of_tickers):
+    """
+    filter prices with multi-threads
+
+    :param list_of_tickers: list of tickers
+    :return: None
+
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        executor.map(volume_filter, list_of_tickers)
+
+# %%
 
 def DTE(expiration):
     """
@@ -251,7 +208,6 @@ def DTE(expiration):
     today = date.today()
     delta = exp_date - today
     return (delta.days)
-
 
 def find_score(expiration, premium, delta, strike):
     """
@@ -266,7 +222,6 @@ def find_score(expiration, premium, delta, strike):
     K1 = 30 / time_diff
     score = K1 * (1 - 3 * abs(delta)) * premium * 2000 / strike
     return score
-
 
 def find_score_each_expiration(expiration, udlying):
     """
@@ -300,9 +255,6 @@ def find_score_each_expiration(expiration, udlying):
         if score > Best_option_score:
             Best_option_score = score
             Best_option = "{} {} {} put with score {}.{}".format(udlying, expiration, float(strike), int(score),int(delta))
-        
-
-
 
 def multi_find_score(udlying):
     """
@@ -341,23 +293,27 @@ def multi_find_score_multiprocess(udlying,processes=None):
             print(print("Best option overall:", max(results)[1]))
 
 
+
 # %%
 
 # if __name__ == '__main__':
 print('running')
 print('reading input')
 option_list = csv_read (csv_name="optionable_list.csv")
+
+#%%
+
 # print('price filtering')
 # price_filter_multi(option_list[1:1000])
 # print(len(option_list))
 # print(len(filtered_list))
 print('finding high IV stocks')
-processes2 = []
-with ThreadPoolExecutor(max_workers=100) as executor:
-   for ticker in option_list:
-        processes2.append(executor.submit(get_high_iv_list, ticker))
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+    executor.map(get_high_iv_list,option_list)
 print(high_iv_list)
 
+#%%
 print("volume filtering")
 volume_filter_multi(high_iv_list)
 print(filtered_list)
@@ -365,6 +321,19 @@ udlying ='NIO'
 print(udlying)
 pd.options.mode.chained_assignment = None  # default='warn'
 print('finding the best option')
+#%%
+#Combine the two function above
+
+start = time.time()
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+    executor.map(get_high_iv_and_filter_volume,option_list)
+
+print(filtered_list)
+print(f"Threads Time: {time.time()-start}")
+filtered_list=list()
+
+
 
 # %%
 #Multithreads
