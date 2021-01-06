@@ -3,6 +3,5 @@
 .idea
 *.pyc
 __pycache__/
-/API_KEY.py
 .DS_Store
 /API_TOKEN.py
