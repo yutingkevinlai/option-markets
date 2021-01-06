@@ -82,7 +82,7 @@ def get_volatility(ticker="AAPL"):
     params = {
         "ticker": ticker,
         "perType": "30-Day",
-        "identifier": "iv-call"
+        "identifier": "iv-put"
     }
     r = requests.get(url=url, params=params)
     iv = r.json()
@@ -139,11 +139,10 @@ def get_high_iv_list(ticker, threshold=0.8):
 
 def volume_filter(udlying, v_min=5000000):
     """
-    filter price between min and max
-    add filtered price to filtered_list
+    filter stock volume
+    :add to filtered_list
     :param udlying: stock
-    :param min_price: min price default 30
-    :param max_price: max price dafult 200
+    :param v_min: volume threshold
     :return: None
     """
     global filtered_list
@@ -261,10 +260,8 @@ def multi_find_score(udlying):
     :param udlying:
     :return:
     """
-    print(udlying)
-    ticker = yf.Ticker(udlying)
     expirations = get_expiration(ticker=udlying)
-    print(expirations)
+    #print(expirations)
     results = list()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -307,33 +304,26 @@ option_list = csv_read (csv_name="optionable_list.csv")
 # price_filter_multi(option_list[1:1000])
 # print(len(option_list))
 # print(len(filtered_list))
-print('finding high IV stocks')
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-    executor.map(get_high_iv_list,option_list)
-print(high_iv_list)
+#print('finding high IV stocks')
+
+#with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+#    executor.map(get_high_iv_list,option_list)
+#print(high_iv_list)
 
 #%%
-print("volume filtering")
-volume_filter_multi(high_iv_list)
-print(filtered_list)
-udlying ='NIO'
-print(udlying)
-pd.options.mode.chained_assignment = None  # default='warn'
-print('finding the best option')
+#print("volume filtering")
+#volume_filter_multi(high_iv_list)
+#print(filtered_list)
+#pd.options.mode.chained_assignment = None  # default='warn'
+
 #%%
 #Combine the two function above
 
 start = time.time()
-
 with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
     executor.map(get_high_iv_and_filter_volume,option_list)
-
 print(filtered_list)
-print(f"Threads Time: {time.time()-start}")
-filtered_list=list()
-
-
 
 # %%
 #Multithreads
@@ -341,6 +331,9 @@ for udlying in filtered_list:
     pd.options.mode.chained_assignment = None  # default='warn'
     print('finding the best option for', udlying)
     multi_find_score(udlying)
+    
+print(f"Threads Time: {time.time()-start}")
+filtered_list=list()
     
     
     

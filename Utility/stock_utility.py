@@ -31,7 +31,7 @@ def csv_read (csv_name="all_tickers.csv"):
 
     return content
 
-def get_expiration(ticker="AAPL",time_diff=1):
+def get_expiration(ticker="AAPL",time_diff=0):
     """
     Get stock info
     :param ticker: ticker name
@@ -45,6 +45,11 @@ def get_expiration(ticker="AAPL",time_diff=1):
     DAY = 86400*time_diff
     r = requests.get(url=url)
     stock = r.json()
-    epoch_dates = stock.get("optionChain",{}).get("result",[])[0].get("expirationDates",None)
-    expirations = [time.strftime('%Y-%m-%d', time.localtime(date+DAY)) for date in epoch_dates]
-    return expirations
+    expirations = list()
+    results = stock.get("optionChain",{}).get("result",[])
+    if len(results)==0:
+        return expirations
+    else:
+        epoch_dates = results[0].get("expirationDates",None)
+        expirations = [time.strftime('%Y-%m-%d', time.localtime(date+DAY)) for date in epoch_dates]
+        return expirations
