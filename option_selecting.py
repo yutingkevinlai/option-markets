@@ -293,47 +293,48 @@ def multi_find_score_multiprocess(udlying,processes=None):
 
 # %%
 
-# if __name__ == '__main__':
-print('running')
-print('reading input')
-option_list = csv_read (csv_name="optionable_list.csv")
 
-#%%
+if __name__ == '__main__':
+    print('running')
+    print('reading input')
+    option_list = csv_read (csv_name="optionable_list.csv")
 
-# print('price filtering')
-# price_filter_multi(option_list[1:1000])
-# print(len(option_list))
-# print(len(filtered_list))
+    #%%
 
-#print('finding high IV stocks')
+    # print('price filtering')
+    # price_filter_multi(option_list[1:1000])
+    # print(len(option_list))
+    # print(len(filtered_list))
 
-#with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-#    executor.map(get_high_iv_list,option_list)
-#print(high_iv_list)
+    #print('finding high IV stocks')
 
-#%%
-#print("volume filtering")
-#volume_filter_multi(high_iv_list)
-#print(filtered_list)
-#pd.options.mode.chained_assignment = None  # default='warn'
+    #with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+    #    executor.map(get_high_iv_list,option_list)
+    #print(high_iv_list)
 
-#%%
-#Combine the two function above
+    #%%
+    #print("volume filtering")
+    #volume_filter_multi(high_iv_list)
+    #print(filtered_list)
+    #pd.options.mode.chained_assignment = None  # default='warn'
 
-start = time.time()
-with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-    executor.map(get_high_iv_and_filter_volume,option_list)
-print(filtered_list)
+    #%%
+    #Combine the two function above
+
+    start = time.time()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+        executor.map(get_high_iv_and_filter_volume,option_list)
+    print(filtered_list)
 
 # %%
-#Multithreads
-for udlying in filtered_list:
-    pd.options.mode.chained_assignment = None  # default='warn'
-    print('finding the best option for', udlying)
-    multi_find_score(udlying)
-    
-print(f"Threads Time: {time.time()-start}")
-filtered_list=list()
+    #Multithreads
+    # for udlying in filtered_list:
+    #     pd.options.mode.chained_assignment = None  # default='warn'
+    #     print('finding the best option for', udlying)
+    #     multi_find_score(udlying)
+    #
+    # print(f"Threads Time: {time.time()-start}")
+    # filtered_list=list()
     
     
     
