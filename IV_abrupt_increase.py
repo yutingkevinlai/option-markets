@@ -1,44 +1,16 @@
 # %%
-import urllib, json
-import multiprocessing, threading
-import pandas as pd
-import concurrent.futures
-from functools import partial
-from time import time
-from datetime import date
 
-import requests
-from yahoo_fin import options
-import yfinance as yf
+import concurrent.futures
 from wallstreet import Stock, Call, Put
-import time 
 
 from Utility.stock_utility import *
 
 optionable_list = []
 filtered_list = []
 high_iv_list = []
-min_price = 30
-max_price = 200
 
 
 # %%
-
-
-def get_volume(ticker="AAPL"):
-    """
-    Get stock's volume
-    :param ticker: ticker name
-    :return:
-    """
-    url = "https://www.alphaquery.com/data/stock-price-chart"
-    params = {
-        "ticker": ticker,
-    }
-    r = requests.get(url=url, params=params)
-    stock_info = r.json()
-    volume = stock_info["adjusted"][-1]["volume"]
-    return volume
 
 def get_volatility_call(ticker="AAPL"):
     """
@@ -71,22 +43,6 @@ def get_volatility_put(ticker="AAPL"):
     r = requests.get(url=url, params=params)
     iv = r.json()
     return iv[-1]["value"],iv[-2]["value"]
-
-def get_stock(ticker="AAPL"):
-    """
-    Get stock info
-    :param ticker: ticker name
-    :return: stock info
-    """
-    url = f"https://query1.finance.yahoo.com/v7/finance/options/{ticker}"
-    # params = {
-    #     "ticker": ticker,
-    # }
-    r = requests.get(url=url)
-    print(r)
-    stock = r.json()
-    return stock
-
 
 abrupt_increase_list = list()
 def detect_volatility_increase(ticker="AAPL"):
@@ -136,9 +92,5 @@ start = time.time()
 with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
     executor.map(detect_volatility_increase,option_list)
 print(abrupt_increase_list)
-abrupt_increase_list = list()
+# abrupt_increase_list = list()
 # %%
-
-    
-    
-    
