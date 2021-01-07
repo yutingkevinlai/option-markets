@@ -1,6 +1,7 @@
 import csv
 import requests
 import time
+import concurrent.futures
 
 from yahoo_fin import options
 
@@ -18,7 +19,7 @@ def find_optionable_stocks(udlying):
         optionable_list.append(udlying)
 
 
-def csv_read (csv_name="all_tickers.csv"):
+def read_file(csv_name="all_tickers.csv"):
     """
     read csv
     :param csv_name:
@@ -27,7 +28,7 @@ def csv_read (csv_name="all_tickers.csv"):
     content = list()
     with open(csv_name, "r") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
-        content =[lines[0] for lines in csv_reader]
+        content = [lines[0] for lines in csv_reader]
 
     return content
 
@@ -96,7 +97,7 @@ def get_tickers():
     global filtered_list
 
     ## read all ticker names
-    list_of_tickers = csv_read(csv_name="all_tickers_V2.csv")
+    list_of_tickers = read_file(csv_name="all_tickers_V2.csv")
     print(list_of_tickers)
     print(len(list_of_tickers))
 
@@ -120,18 +121,27 @@ def get_tickers():
     return optionable_list, filtered_list
 
 
-def get_volatility(ticker="AAPL"):
+def get_volatility(ticker="AAPL", is_put=True):
     """
     Get stock's volatiliy
     :param ticker: ticker name
+    :param is_put: put or get
     :return: list of json volatility data
     """
     url = "https://www.alphaquery.com/data/option-statistic-chart"
-    params = {
-        "ticker": ticker,
-        "perType": "30-Day",
-        "identifier": "iv-put"
-    }
+    params = {}
+    if is_put:
+        params = {
+            "ticker": ticker,
+            "perType": "30-Day",
+            "identifier": "iv-put"
+        }
+    else:
+        params = {
+            "ticker": ticker,
+            "perType": "30-Day",
+            "identifier": "iv-call"
+        }
     r = requests.get(url=url, params=params)
     iv = r.json()
     return iv

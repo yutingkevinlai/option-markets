@@ -193,7 +193,7 @@ def multi_find_score_multiprocess(udlying,processes=None):
 if __name__ == '__main__':
     print('running')
     print('reading input')
-    option_list = csv_read (csv_name="optionable_list.csv")
+    option_list = read_file(csv_name="optionable_list.csv")
 
     #%%
 

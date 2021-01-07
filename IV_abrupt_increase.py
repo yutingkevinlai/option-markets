@@ -11,40 +11,8 @@ high_iv_list = []
 
 
 # %%
-
-def get_volatility_call(ticker="AAPL"):
-    """
-    Get stock's volatiliy
-    :param ticker: ticker name
-    :return: list of json volatility data
-    """
-    url = "https://www.alphaquery.com/data/option-statistic-chart"
-    params = {
-        "ticker": ticker,
-        "perType": "30-Day",
-        "identifier": "iv-call"
-    }
-    r = requests.get(url=url, params=params)
-    iv = r.json()
-    return iv[-1]["value"],iv[-2]["value"]
-
-def get_volatility_put(ticker="AAPL"):
-    """
-    Get stock's volatiliy
-    :param ticker: ticker name
-    :return: list of json volatility data
-    """
-    url = "https://www.alphaquery.com/data/option-statistic-chart"
-    params = {
-        "ticker": ticker,
-        "perType": "30-Day",
-        "identifier": "iv-put"
-    }
-    r = requests.get(url=url, params=params)
-    iv = r.json()
-    return iv[-1]["value"],iv[-2]["value"]
-
 abrupt_increase_list = list()
+
 def detect_volatility_increase(ticker="AAPL"):
     """
     Calculate avg volatiliy
@@ -55,29 +23,29 @@ def detect_volatility_increase(ticker="AAPL"):
     print(ticker)
     s = Stock(ticker)
     global abrupt_increase_list
-    if get_volume(ticker)>5000000 and s.price>10:
-        ivput_now, ivput_past= get_volatility_put(ticker)
-        ivcall_now,ivcall_past = get_volatility_call(ticker)
-    # get the most recent values
-        if  ivput_now>1.3*ivput_past and ivput_now>0.3:
-            #s = Stock(ticker)
-            #if get_volume(ticker) > 1000000 and s.price>10:
+    if get_volume(ticker) > 5000000 and s.price > 10:
+        ivput_json = get_volatility(ticker, is_put=True)
+        ivcall_json = get_volatility(ticker, is_put=False)
+        ivput_now, ivput_past = ivput_json[-1]["value"], ivput_json[-2]["value"]
+        ivcall_now, ivcall_past = ivcall_json[-1]["value"], ivcall_json[-2]["value"]
+        # get the most recent values
+        if ivput_now > 1.3 * ivput_past and ivput_now > 0.3:
+            # s = Stock(ticker)
+            # if get_volume(ticker) > 1000000 and s.price>10:
             print(ticker, "has abrupt increase in volatility")
             abrupt_increase_list.append(ticker)
-        elif  ivcall_now>1.3*ivcall_past and ivcall_now>0.3:
-            #s = Stock(ticker)
-            #if get_volume(ticker) > 1000000 and s.price>10:
+        elif ivcall_now > 1.3 * ivcall_past and ivcall_now > 0.3:
+            # s = Stock(ticker)
+            # if get_volume(ticker) > 1000000 and s.price>10:
             print(ticker, "has abrupt increase in volatility")
             abrupt_increase_list.append(ticker)
-        
-
 
 # %%
 
 # if __name__ == '__main__':
 print('running')
 print('reading input')
-option_list = csv_read (csv_name="optionable_list.csv")
+option_list = read_file(csv_name="optionable_list.csv")
 
 #%%
 #print("volume filtering")
