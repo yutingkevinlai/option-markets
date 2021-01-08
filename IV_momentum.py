@@ -156,6 +156,7 @@ def multi_find_score_multiprocess(udlying,processes=None):
 
 High_IV_diff_list=list()
 def High_IV_diff_flag(udlying):
+    global High_IV_diff_list
     callIV = get_volatility_call(udlying)[-1]['value']
     putIV = get_volatility_put(udlying)[-1]['value']
     if abs(callIV-putIV)>0.5:
@@ -171,6 +172,7 @@ def High_IV_diff_flag(udlying):
 def High_IV_diff_flag_ratio(udlying):
     callIV = get_volatility_call(udlying)[-1]['value']
     putIV = get_volatility_put(udlying)[-1]['value']
+    global High_IV_diff_list
     if callIV > 2*putIV :
         s = Stock(udlying)
         if get_volume(udlying) > 1000000 and s.price>10:
@@ -196,10 +198,11 @@ option_list = csv_read (csv_name="optionable_list.csv")
 
 #%%
 #Combine the two function above
-
+print("Finding put-call IV high diff stocks")
 start = time.time()
 with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-    executor.map(High_IV_diff_flag_ratio,option_list)
+    #executor.map(High_IV_diff_flag_ratio,option_list)
+    executor.map(High_IV_diff_flag,option_list)
 print(High_IV_diff_list)
 
 # %%

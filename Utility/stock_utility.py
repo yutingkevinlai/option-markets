@@ -31,6 +31,18 @@ def csv_read (csv_name="all_tickers.csv"):
 
     return content
 
+def csv_write (list_in=list() ,csv_name="Filtered_list.csv"):
+    """
+    read csv
+    :param csv_name:
+    :return: content list
+    """
+    content = list()
+    with open(csv_name, "w") as csv_file:
+        write = csv.writer(csv_file)
+
+    return content
+
 def get_expiration(ticker="AAPL",time_diff=0):
     """
     Get stock info
