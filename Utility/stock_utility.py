@@ -32,6 +32,20 @@ def read_file(csv_name="all_tickers.csv"):
 
     return content
 
+def csv_write(list_in=None, csv_name="Filtered_list.csv"):
+    """
+    read csv
+    :param csv_name:
+    :return: content list
+    """
+    if list_in is None:
+        list_in = list()
+    content = list()
+    with open(csv_name, "w") as csv_file:
+        write = csv.writer(csv_file)
+
+    return content
+
 def get_expiration(ticker="AAPL",time_diff=0):
     """
     Get stock info
@@ -102,7 +116,7 @@ def get_tickers():
     print(len(list_of_tickers))
 
     ## find all available tickers
-    start = time()
+    start = time.time()
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(find_optionable_stocks, list_of_tickers)
 
@@ -116,7 +130,7 @@ def get_tickers():
     # print(len(optionable_list))
     # print(filtered_list)
     # print(len(filtered_list))
-    print(f'Time taken: {time() - start}')
+    print(f'Time taken: {time.time() - start}')
 
     return optionable_list, filtered_list
 

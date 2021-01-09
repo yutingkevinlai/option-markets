@@ -29,6 +29,7 @@ def High_IV_diff_flag(udlying):
 
 
 def High_IV_diff_flag_ratio(udlying):
+
     callIV = get_volatility(udlying, is_put=False)[-1]['value']
     putIV = get_volatility(udlying, is_put=True)[-1]['value']
     if callIV > 2 * putIV:
@@ -56,6 +57,7 @@ print("reading done")
 # volume_filter_multi(high_iv_list)
 # print(filtered_list)
 # pd.options.mode.chained_assignment = None  # default='warn'
+
 
 # %%
 # Combine the two function above

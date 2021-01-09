@@ -3,7 +3,7 @@ import multiprocessing, threading
 import concurrent.futures
 from functools import partial
 from datetime import date
-
+import numpy as np
 import yfinance as yf
 from wallstreet import Stock, Call, Put
 
@@ -115,7 +115,7 @@ def find_score(expiration, premium, delta, strike):
     """
     time_diff = DTE(expiration)
     K1 = 30 / time_diff
-    score = K1 * (1 - 3 * abs(delta)) * premium * 2000 / strike
+    score = K1 * (1 - 2.5 * abs(delta)) * premium * 2000 / strike
     return score
 
 def find_score_each_expiration(expiration, udlying):
@@ -185,7 +185,15 @@ def multi_find_score_multiprocess(udlying,processes=None):
             results = pool.map(partial(find_score_each_expiration, udlying=udlying), expirations[:5])
             print(print("Best option overall:", max(results)[1]))
 
-
+def Refilter_input(refilter=False):
+    global filtered_list
+    if refilter:
+        print("refiltering lists")
+        option_list = read_file(csv_name="optionable_list.csv")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+            executor.map(get_high_iv_and_filter_volume,option_list)
+        np.savetxt("filtered_list.csv", filtered_list, delimiter=",", fmt="%s")
+    filtered_list = list()
 
 # %%
 
@@ -231,6 +239,6 @@ if __name__ == '__main__':
     #
     # print(f"Threads Time: {time.time()-start}")
     # filtered_list=list()
-    
+
     
     
