@@ -1,14 +1,13 @@
 # %%
 import requests
-from urllib.parse import unquote
+from urllib.parse import unquote, urlencode
 
 # %%
 
 
-geturl = r'https://www.barchart.com/etfs-funds/quotes/SPY/volatility-greeks'
-apiurl = r'https://www.barchart.com/proxies/core-api/v1/options/get'
+get_url = r'https://www.barchart.com/etfs-funds/quotes/SPY/volatility-greeks'
 
-getheaders = {
+get_headers = {
 
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
     'accept-encoding': 'gzip, deflate, br',
@@ -18,24 +17,26 @@ getheaders = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36'
 }
 
-getpay = {
+get_para = {
     'expiration': '2021-01-15-m'
 }
 
 s = requests.Session()
-r = s.get(geturl, params=getpay, headers=getheaders)
+r = s.get(get_url, params=get_para, headers=get_headers)
 
 # %%
-headers = {
+api_url = r'https://www.barchart.com/proxies/core-api/v1/options/get'
+
+api_header = {
     'accept': 'application/json',
     'accept-encoding': 'gzip, deflate, br',
     'accept-language': 'en-US,en;q=0.9',
-    'referer': "https://www.barchart.com/etfs-funds/quotes/SPY/volatility-greeks?expiration=2021-01-15-m",
+    'referer': f"{get_url}?{urlencode(get_para)}",
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36',
     'X-XSRF-TOKEN': unquote(unquote(s.cookies.get_dict()['XSRF-TOKEN']))
 
 }
-payload = {
+api_para = {
     'fields': "symbol,baseSymbol,strikePrice,lastPrice,theoretical,volatility,delta,gamma,rho,theta,vega,volume,openInterest,volumeOpenInterestRatio,optionType,daysToExpiration,expirationDate,tradeTime,averageVolatility,symbolCode,symbolType",
     'baseSymbol': 'SPY',
     'groupBy': "optionType",
@@ -48,6 +49,7 @@ payload = {
 
 }
 
-r = s.get(apiurl, params=payload, headers=headers)
+r = s.get(api_url, params=api_para, headers=api_header)
+##results
 j = r.json()
 print(j)
