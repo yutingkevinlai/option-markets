@@ -3,7 +3,7 @@ import multiprocessing, threading
 import concurrent.futures
 from functools import partial
 from datetime import date
-
+import numpy as np
 import yfinance as yf
 from wallstreet import Stock, Call, Put
 
@@ -189,7 +189,7 @@ def Refilter_input(refilter=False):
     global filtered_list
     if refilter:
         print("refiltering lists")
-        option_list = csv_read (csv_name="optionable_list.csv")
+        option_list = read_file(csv_name="optionable_list.csv")
         with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
             executor.map(get_high_iv_and_filter_volume,option_list)
         np.savetxt("filtered_list.csv", filtered_list, delimiter=",", fmt="%s")
