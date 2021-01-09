@@ -2,8 +2,10 @@ import csv
 import requests
 import time
 import concurrent.futures
-
+import requests
+from urllib.parse import unquote, urlencode
 from yahoo_fin import options
+
 
 def find_optionable_stocks(udlying):
     """
@@ -32,7 +34,8 @@ def read_file(csv_name="all_tickers.csv"):
 
     return content
 
-def csv_write (list_in=list() ,csv_name="Filtered_list.csv"):
+
+def csv_write(list_in=list(), csv_name="Filtered_list.csv"):
     """
     read csv
     :param csv_name:
@@ -44,7 +47,8 @@ def csv_write (list_in=list() ,csv_name="Filtered_list.csv"):
 
     return content
 
-def get_expiration(ticker="AAPL",time_diff=0):
+
+def get_expiration(ticker="AAPL", time_diff=0):
     """
     Get stock info
     :param ticker: ticker name
@@ -55,7 +59,7 @@ def get_expiration(ticker="AAPL",time_diff=0):
     # params = {
     #     "ticker": ticker,
     # }
-    DAY = 86400*time_diff
+    DAY = 86400 * time_diff
     r = requests.get(url=url)
     stock = r.json()
     expirations = list()
@@ -175,3 +179,50 @@ def get_avg_volatility(ticker="AAPL", lookahead=30):
 
     iv_avg = sum(ivs) / lookahead
     return iv_avg, iv
+
+
+def get_option_chain_barchart(ticker="AAPL", expi='2021-01-22', Type="weekly"):
+    get_url = r'https://www.barchart.com/etfs-funds/quotes/SPY/volatility-greeks'
+
+    get_headers = {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'max-age=0',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36'
+    }
+
+    get_para = {
+        # 'expiration': '2021-01-15-m'
+    }
+
+    s = requests.Session()
+    r = s.get(get_url, params=get_para, headers=get_headers)
+
+    # %%
+    api_url = r'https://www.barchart.com/proxies/core-api/v1/options/get'
+
+    api_header = {
+        'accept': 'application/json',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US,en;q=0.9',
+        'referer': f"{get_url}?{urlencode(get_para)}",
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36',
+        'X-XSRF-TOKEN': unquote(unquote(s.cookies.get_dict()['XSRF-TOKEN']))
+    }
+    api_para = {
+        'fields': "symbol,baseSymbol,strikePrice,lastPrice,theoretical,volatility,delta,gamma,rho,theta,vega,volume,openInterest,volumeOpenInterestRatio,optionType,daysToExpiration,expirationDate,tradeTime,averageVolatility,symbolCode,symbolType",
+        'baseSymbol': ticker,
+        'groupBy': "optionType",
+        'expirationDate': '2021-01-22',
+        'meta': 'field.shortName,expirations,field.description',
+        'orderBy': 'strikePrice',
+        'orderDir': 'asc',
+        'expirationType': Type,
+        'raw': '1'
+    }
+
+    r = s.get(api_url, params=api_para, headers=api_header)
+    j = r.json()
+    return j
