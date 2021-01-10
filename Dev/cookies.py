@@ -4,7 +4,7 @@ from urllib.parse import unquote, urlencode
 
 # %%
 
-def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-22', Type = "weekly"):
+def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-15', Type = "monthly"):
     get_url = r'https://www.barchart.com/etfs-funds/quotes/SPY/volatility-greeks'
     
     get_headers = {
@@ -40,7 +40,7 @@ def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-22', Type = "weekl
         'fields': "symbol,baseSymbol,strikePrice,lastPrice,theoretical,volatility,delta,gamma,rho,theta,vega,volume,openInterest,volumeOpenInterestRatio,optionType,daysToExpiration,expirationDate,tradeTime,averageVolatility,symbolCode,symbolType",
         'baseSymbol': ticker,
         'groupBy': "optionType",
-        'expirationDate': '2021-01-22',
+        'expirationDate': expi,
         'meta': 'field.shortName,expirations,field.description',
         'orderBy': 'strikePrice',
         'orderDir': 'asc',
