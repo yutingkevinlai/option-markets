@@ -24,10 +24,8 @@ def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-15', Type = "month
     s = requests.Session()
     r = s.get(get_url, params=get_para, headers=get_headers)
     while s.cookies.get_dict().get('XSRF-TOKEN') is None:
-        print("no XSRF token rest 150sec")
-        print(s)
-        time.sleep(150)
-        s = requests.Session()
+        print("no XSRF token rest 180sec") ## 180 sec is the 403 error resting time
+        time.sleep(180)
         r = s.get(get_url, params=get_para, headers=get_headers)
     # %%
     api_url = r'https://www.barchart.com/proxies/core-api/v1/options/get'
@@ -58,7 +56,11 @@ def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-15', Type = "month
     
     r = s.get(api_url, params=api_para, headers=api_header)
     ##results
-    print(r)        
+    while r.status_code == 403:
+        print(r)
+        print("403 error rest 180sec") ## 180 sec is the 403 error resting time
+        time.sleep(180)
+        r = s.get(api_url, params=api_para, headers=api_header)
         
     j = r.json()
     
