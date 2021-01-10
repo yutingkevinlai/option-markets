@@ -85,7 +85,7 @@ def get_high_iv_and_filter_volume(ticker,threshold=0.8,v_min=5000000):
         print(f"Add {ticker}")
         filtered_list.append(ticker)
         
-def find_best_option(ticker="AAPL"):
+def find_best_option(ticker="AAPL", Only_monthly = False):
     ## switching to barchart for scrapping data with more strucutred option chain data
     print("finding best option for:", ticker)
     option_info = get_option_chain_barchart(ticker = ticker)
@@ -93,21 +93,24 @@ def find_best_option(ticker="AAPL"):
         print("Too many attempts, resting 10 sec")
         time.sleep(10)
         option_info = get_option_chain_barchart(ticker = ticker)
-    
+
     expirations_raw = option_info["meta"]["expirations"]
+
+    
     expirations = {}
     idx_rec = ["no option found"]
     clstype = "Put"
     ## reorganize the expiration data for formats when accessing barchart
     if len(expirations_raw)==0:
         return idx_rec
-        
     for key, value in expirations_raw.items():
+        if Only_monthly is True and key == 'weekly':
+            continue
         for v in value:
             expirations[v] = key
     
     max_score = 0
-
+    
     for expi in expirations:
         Date_to_expire = DTE(expi)  ## find date to expiration
         if(Date_to_expire>50) or Date_to_expire==0: ## continue the loop if expiration date is too far away
@@ -143,7 +146,7 @@ def find_best_option(ticker="AAPL"):
             if score > max_score: ## comparing the scores
                 max_score = score
                 idx_rec = [ticker, expi, opt_strike, clstype, "with score:", score, "theo_price:", opt_theo_price, "last_price:",i['raw']["lastPrice"]]
-        time.sleep(1) ## reduce access time of the website
+        time.sleep(0.5) ## reduce access time of the website
     listToStr = ' '.join(map(str, idx_rec)) 
     print(listToStr)
     return idx_rec
@@ -159,7 +162,7 @@ print('running')
 print('reading input')
 Refilter_input(refilter=False)
 input_list = read_file(csv_name="filtered_list.csv")
-
+input_list.remove('IPOC')
 
 
 print(input_list)
@@ -168,4 +171,4 @@ print(input_list)
 
 for ticker in input_list:
     pd.options.mode.chained_assignment = None  # default='warn'
-    find_best_option(ticker=ticker)
+    find_best_option(ticker=ticker, Only_monthly = True)
