@@ -84,36 +84,31 @@ def get_high_iv_and_filter_volume(ticker,threshold=0.8,v_min=5000000):
         print(f"Add {ticker}")
         filtered_list.append(ticker)
         
-def Refilter_input(refilter=False):
-    global filtered_list
-    if refilter:
-        print("refiltering lists")
-        option_list = read_file(csv_name="optionable_list.csv")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-            executor.map(get_high_iv_and_filter_volume,option_list)
-        np.savetxt("filtered_list.csv", filtered_list, delimiter=",", fmt="%s")
-    filtered_list = list()
-   
-    
-def find_best_option(ticker = "AAPL"):
+def find_best_option(ticker="AAPL"):
+    ## switching to barchart for scrapping data with more strucutred option chain data
     print("finding best option for:", ticker)
     option_info = get_option_chain_barchart(ticker = ticker)
     expirations_raw = option_info["meta"]["expirations"]
     expirations = {}
+    idx_rec = ["no option found"]
+    clstype = "Put"
+    ## reorganize the expiration data for formats when accessing barchart
+    if len(expirations_raw)==0:
+        return idx_rec
+        
     for key, value in expirations_raw.items():
         for v in value:
             expirations[v] = key
     
     max_score = 0
-    idx_rec = ["no option found"]
-    clstype = "Put"
+
     for expi in expirations:
-        Date_to_expire = DTE(expi)
-        if(Date_to_expire>60) or Date_to_expire==0:
+        Date_to_expire = DTE(expi)  ## find date to expiration
+        if(Date_to_expire>60) or Date_to_expire==0: ## continue the loop if expiration date is too far away
             continue
         option_info = get_option_chain_barchart(ticker = ticker, expi=expi, Type = expirations[expi])
         puts_info =option_info["data"][clstype] 
-        for i in puts_info:
+        for i in puts_info: ## iterate all the strike prices
             opt_strike = i['raw']["strikePrice"]
             opt_price = i['raw']["lastPrice"]
             opt_theo_price = i['raw']["theoretical"]
@@ -123,21 +118,22 @@ def find_best_option(ticker = "AAPL"):
             opt_vega = i['raw']["vega"]
             opt_DTE = i['raw']["daysToExpiration"]
             RoR = opt_price/opt_strike
-            if opt_DTE>60 or abs(opt_delta) > 0.5 or abs(opt_delta) < 0.1 or RoR < 0.005:
-                break
+            if abs(opt_delta) > 0.5 or abs(opt_delta) < 0.1 or RoR < 0.005:
+                break ## filter out in-the-money option, small RoR or small delta options 
             K1 = 30 / (opt_DTE+1)
+            
+            #### finding score here
             score = K1 * (1 - 2.5 * abs(opt_delta)) * opt_theo_price * 2000 / opt_strike
-            if score > max_score:
+            
+            
+            if score > max_score: ## comparing the scores
                 max_score = score
                 idx_rec = [ticker, expi, opt_strike, clstype, "with score:", score]
-            #print(opt_strike, opt_delta, score, RoR)
+        time.sleep(1) ## reduce access time of the website
     listToStr = ' '.join(map(str, idx_rec)) 
     print(listToStr)
     return idx_rec
 
-def multi_find_score(ticker = "AAPL"):
-
-    return 
 # %%
 
 
@@ -153,11 +149,9 @@ input_list = read_file(csv_name="filtered_list.csv")
 
 
 print(input_list)
-
 # %%
 #Multithreads
 
 for ticker in input_list:
     pd.options.mode.chained_assignment = None  # default='warn'
     find_best_option(ticker=ticker)
-    time.sleep(1)
