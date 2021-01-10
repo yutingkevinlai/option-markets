@@ -26,7 +26,7 @@ def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-15', Type = "month
     
     # %%
     api_url = r'https://www.barchart.com/proxies/core-api/v1/options/get'
-    
+    #print(s.cookies.get_dict())
     api_header = {
         'accept': 'application/json',
         'accept-encoding': 'gzip, deflate, br',
@@ -34,6 +34,8 @@ def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-15', Type = "month
         'referer': f"{get_url}?{urlencode(get_para)}",
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36',
         'X-XSRF-TOKEN': unquote(unquote(s.cookies.get_dict()['XSRF-TOKEN']))
+        #'X-XSRF-TOKEN': unquote(unquote('eyJpdiI6Im5CZFpSaUMwRHFxVzdiajNKcXdlL2c9PSIsInZhbHVlIjoicEVFNXBZU1pPaklsd25mTThkSDJYU1JjQVBMNHFSeWFzS24zSCtXOC9BTlhKL3ZObFZUeDVPNkNZK2VZQ20xYyIsIm1hYyI6ImUzYzdkYzBiNGRlNThkODQzOTQzOWMzN2U2NDdiYmMwNDY0YjNiNTgxZDMyMDkxMGIxM2NmN2JkN2YwNTI2YzUifQ%3D%3D'))
+
     
     }
     api_para = {
