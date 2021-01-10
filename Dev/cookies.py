@@ -37,7 +37,7 @@ def get_option_chain_barchart(ticker = "AAPL", expi ='2021-01-15', Type = "month
     
     }
     api_para = {
-        'fields': "symbol,baseSymbol,strikePrice,lastPrice,theoretical,volatility,delta,gamma,rho,theta,vega,volume,openInterest,volumeOpenInterestRatio,optionType,daysToExpiration,expirationDate,tradeTime,averageVolatility,symbolCode,symbolType",
+        'fields': "symbol,baseSymbol,theoretical,delta,gamma,theta,vega,rho,strikePrice,bidPrice,midpoint,askPrice,lastPrice,volume,openInterest,volumeOpenInterestRatio,volatility,optionType,daysToExpiration,expirationDate,tradeTime,averageVolatility,symbolCode,symbolType",
         'baseSymbol': ticker,
         'groupBy': "optionType",
         'expirationDate': expi,

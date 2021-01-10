@@ -15,6 +15,7 @@ import time
 import numpy as np
 
 from Utility.stock_utility import *
+from Dev.cookies import get_option_chain_barchart
 from option_selecting import price_filter, volume_filter, get_high_iv_and_filter_volume, \
     price_filter_multi, volume_filter_multi, DTE, multi_find_score_multiprocess, Refilter_input
 
@@ -109,8 +110,8 @@ def find_best_option(ticker="AAPL"):
         option_info = get_option_chain_barchart(ticker = ticker, expi=expi, Type = expirations[expi])
         puts_info =option_info["data"][clstype] 
         for i in puts_info: ## iterate all the strike prices
-            opt_strike = i['raw']["strikePrice"]
-            opt_price = i['raw']["lastPrice"]
+            opt_strike = i['raw']["strikePrice"]            
+            opt_price = (2*i['raw']["lastPrice"]+i['raw']["bidPrice"]+i['raw']["askPrice"])/4
             opt_theo_price = i['raw']["theoretical"]
             opt_delta = i['raw']["delta"]
             opt_gamma = i['raw']["gamma"]
@@ -118,18 +119,20 @@ def find_best_option(ticker="AAPL"):
             opt_vega = i['raw']["vega"]
             opt_DTE = i['raw']["daysToExpiration"]
             RoR = opt_price/opt_strike
-            if abs(opt_delta) > 0.5 or abs(opt_delta) < 0.1 or RoR < 0.005:
+            if abs(opt_delta) > 0.5:
                 break ## filter out in-the-money option, small RoR or small delta options 
+            if abs(opt_delta) < 0.1 or RoR < 0.005:
+                continue
             K1 = 30 / (opt_DTE+1)
             
             #### finding score here
-            score = K1 * (1 - 2.5 * abs(opt_delta)) * opt_theo_price * 2000 / opt_strike
+            score = K1 * (1 - 2.5 * abs(opt_delta)) * opt_price * 2000 / opt_strike
             
             
             if score > max_score: ## comparing the scores
                 max_score = score
-                idx_rec = [ticker, expi, opt_strike, clstype, "with score:", score]
-        time.sleep(1) ## reduce access time of the website
+                idx_rec = [ticker, expi, opt_strike, clstype, "with score:", score, "theo_price:", opt_theo_price, "last_price:",i['raw']["lastPrice"]]
+        time.sleep(0.5) ## reduce access time of the website
     listToStr = ' '.join(map(str, idx_rec)) 
     print(listToStr)
     return idx_rec
